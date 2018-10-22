@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Diffinator
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      2018.10.22.01
 // @description  Display differences between two segments for attributes that prevent deleting a common node
 // @author       JustinS83
 // @include      https://www.waze.com/editor/*
@@ -57,112 +57,121 @@
 
     function init(){
         injectCSS();
-        W.selectionManager.events.register('selectionchanged', this, diffSegments);
+        W.selectionManager.events.register('selectionchanged', this, checkDisplayDiffinator);
+        checkDisplayDiffinator();
     }
 
-    function diffSegments(){
-        $('#SegDiffContainer').remove();
+    function checkDisplayDiffinator(){
         if(WazeWrap.getSelectedFeatures().length === 2){
-            let selected = WazeWrap.getSelectedFeatures();
-            let seg1St, seg2St;
-            let streets = W.model.streets.getByIds([WazeWrap.getSelectedFeatures()[0].model.attributes.primaryStreetID, WazeWrap.getSelectedFeatures()[1].model.attributes.primaryStreetID]);
-            seg1St = streets[0];
-            seg2St = streets[1];
-            let seg1Street = WazeWrap.getSelectedFeatures()[0].model.getAddress().attributes.street.name;
-            let seg1City = WazeWrap.getSelectedFeatures()[0].model.getAddress().attributes.city.attributes.name;
-            let seg2Street = WazeWrap.getSelectedFeatures()[1].model.getAddress().attributes.street.name;
-            let seg2City = WazeWrap.getSelectedFeatures()[1].model.getAddress().attributes.city.attributes.name;
-            let seg1Alts = WazeWrap.getSelectedFeatures()[0].model.getAddress().attributes.altStreets;
-            let seg2Alts = WazeWrap.getSelectedFeatures()[1].model.getAddress().attributes.altStreets;
+            $('.selection.selection-icon').append('<i class="fa fa-object-ungroup" aria-hidden="true" id="diffSegs" style="cursor:pointer;"></i>');
 
-            var $segDiff = $('<div>');
-            $segDiff.html([
-                '<div class="segDiffContainer" style="display: grid; position: absolute; z-index:1000; background-color:white; top:40px; left:300px; border-radius:20px; border: 2px solid; width: 600px; padding-left:10px; padding-right: =10px; padding-bottom:5px;" id="SegDiffContainer">',
-                `<div class="segDiffHeader"><h3>The Diffinator<img width="50" height="50" src="${terminatorimg}"></h3></div>`,
-                '<div class="segDiffAttr"><h4>Attribute</h4></div>',
-                `<div class="segDiffSeg1"><h4>Segment ${selected[0].model.attributes.id}</h4></div>`,
-                `<div class="segDiffSeg2"><h4>Segment ${selected[1].model.attributes.id}</h4></div>`,
-                '</div>'
-            ].join(' '));
+            $('#diffSegs').click(releaseTheDiffinator);
+        }
+    }
 
-            $("#WazeMap").append($segDiff.html());
+    function releaseTheDiffinator(){
+        let selected = WazeWrap.getSelectedFeatures();
+        let seg1St, seg2St;
+        let streets = W.model.streets.getByIds([WazeWrap.getSelectedFeatures()[0].model.attributes.primaryStreetID, WazeWrap.getSelectedFeatures()[1].model.attributes.primaryStreetID]);
+        seg1St = streets[0];
+        seg2St = streets[1];
+        let seg1Street = WazeWrap.getSelectedFeatures()[0].model.getAddress().attributes.street.name;
+        let seg1City = WazeWrap.getSelectedFeatures()[0].model.getAddress().attributes.city.attributes.name;
+        let seg2Street = WazeWrap.getSelectedFeatures()[1].model.getAddress().attributes.street.name;
+        let seg2City = WazeWrap.getSelectedFeatures()[1].model.getAddress().attributes.city.attributes.name;
+        let seg1Alts = WazeWrap.getSelectedFeatures()[0].model.getAddress().attributes.altStreets;
+        let seg2Alts = WazeWrap.getSelectedFeatures()[1].model.getAddress().attributes.altStreets;
 
-            if(seg1Street !== seg2Street){
-                $('.segDiffAttr').append(`<div>Primary Street</div>`);
-                $('.segDiffSeg1').append(`<div>${seg1Street}</div>`);
-                $('.segDiffSeg2').append(`<div>${seg2Street}</div>`);
-            }
-            if(seg1City !== seg2City){
-                $('.segDiffAttr').append(`<div>Primary City</div>`);
-                if(seg1City === "")
-                    seg1City = "None";
-                if(seg2City === "")
-                    seg2City = "None";
-                $('.segDiffSeg1').append(`<div>${seg1City}</div>`);
-                $('.segDiffSeg2').append(`<div>${seg2City}</div>`);
-            }
+        $('#SegDiffContainer').remove();
+        var $segDiff = $('<div>');
+        $segDiff.html([
+            '<div class="segDiffContainer" style="display: grid; position: absolute; z-index:1000; background-color:white; top:40px; left:300px; border-radius:20px; border: 2px solid; width: 600px; padding-left:10px; padding-right: =10px; padding-bottom:5px;" id="SegDiffContainer">',
+            `<div class="segDiffHeader"><h3>The Diffinator<img width="50" height="50" src="${terminatorimg}"></h3><div style="position:absolute; float:right; cursor:pointer; top:0; right:10px;" id="segDiffClose"><i class="fa fa-window-close" aria-hidden="true"></i></div></div>`,
+            '<div class="segDiffAttr"><h4>Attribute</h4></div>',
+            `<div class="segDiffSeg1"><h4>Segment ${selected[0].model.attributes.id}</h4></div>`,
+            `<div class="segDiffSeg2"><h4>Segment ${selected[1].model.attributes.id}</h4></div>`,
+            '</div>'
+        ].join(' '));
 
-            for (var property in selected[0].model.attributes) {
-                if (selected[0].model.attributes.hasOwnProperty(property)) {
-                    if(attributeToTextMap[property] !== undefined){
-                        if(selected[0].model.attributes[property] != selected[1].model.attributes[property]){
-                            if(property !== "flags"){
-                                $('.segDiffAttr').append(`<div>${attributeToTextMap[property]}</div>`);
+        $("#WazeMap").append($segDiff.html());
 
-                                if(property=="roadType"){
-                                    $('.segDiffSeg1').append(`<div>${I18n.translations[I18n.currentLocale()].segment.road_types[selected[0].model.attributes[property]]}</div>`);
-                                    $('.segDiffSeg2').append(`<div>${I18n.translations[I18n.currentLocale()].segment.road_types[selected[1].model.attributes[property]]}</div>`);
+        $('#segDiffClose').click(function(){ $('#SegDiffContainer').remove(); });
+
+        if(seg1Street !== seg2Street){
+            $('.segDiffAttr').append(`<div>Primary Street</div>`);
+            $('.segDiffSeg1').append(`<div>${seg1Street}</div>`);
+            $('.segDiffSeg2').append(`<div>${seg2Street}</div>`);
+        }
+        if(seg1City !== seg2City){
+            $('.segDiffAttr').append(`<div>Primary City</div>`);
+            if(seg1City === "")
+                seg1City = "None";
+            if(seg2City === "")
+                seg2City = "None";
+            $('.segDiffSeg1').append(`<div>${seg1City}</div>`);
+            $('.segDiffSeg2').append(`<div>${seg2City}</div>`);
+        }
+
+        for (var property in selected[0].model.attributes) {
+            if (selected[0].model.attributes.hasOwnProperty(property)) {
+                if(attributeToTextMap[property] !== undefined){
+                    if(selected[0].model.attributes[property] != selected[1].model.attributes[property]){
+                        if(property !== "flags"){
+                            $('.segDiffAttr').append(`<div>${attributeToTextMap[property]}</div>`);
+
+                            if(property=="roadType"){
+                                $('.segDiffSeg1').append(`<div>${I18n.translations[I18n.currentLocale()].segment.road_types[selected[0].model.attributes[property]]}</div>`);
+                                $('.segDiffSeg2').append(`<div>${I18n.translations[I18n.currentLocale()].segment.road_types[selected[1].model.attributes[property]]}</div>`);
+                            }
+                            else if(property == "routingRoadType"){
+                                let rrt0 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.current;
+                                let rrt1 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.current;
+                                if(selected[0].model.attributes.routingRoadType !== null){
+                                    if(isNextRoutingRoadType(selected[0].model.attributes.roadType,selected[0].model.attributes[property]))
+                                        rrt0 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.next;
+                                    else
+                                        rrt0 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.prev;
                                 }
-                                else if(property == "routingRoadType"){
-                                    let rrt0 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.current;
-                                    let rrt1 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.current;
-                                    if(selected[0].model.attributes.routingRoadType !== null){
-                                        if(isNextRoutingRoadType(selected[0].model.attributes.roadType,selected[0].model.attributes[property]))
-                                            rrt0 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.next;
-                                        else
-                                            rrt0 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.prev;
-                                    }
 
-                                    if(selected[1].model.attributes.routingRoadType !== null){
-                                        if(isNextRoutingRoadType(selected[1].model.attributes.roadType, selected[1].model.attributes[property]))
-                                            rrt1 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.next;
-                                        else
-                                            rrt1 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.prev;
-                                    }
+                                if(selected[1].model.attributes.routingRoadType !== null){
+                                    if(isNextRoutingRoadType(selected[1].model.attributes.roadType, selected[1].model.attributes[property]))
+                                        rrt1 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.next;
+                                    else
+                                        rrt1 = I18n.translations[I18n.currentLocale()].edit.segment.routing.road_type.prev;
+                                }
 
-                                    $('.segDiffSeg1').append(`<div>${rrt0}</div>`);
-                                    $('.segDiffSeg2').append(`<div>${rrt1}</div>`);
-                                }
-                                else{
-                                    $('.segDiffSeg1').append(`<div>${selected[0].model.attributes[property]}</div>`);
-                                    $('.segDiffSeg2').append(`<div>${selected[1].model.attributes[property]}</div>`);
-                                }
+                                $('.segDiffSeg1').append(`<div>${rrt0}</div>`);
+                                $('.segDiffSeg2').append(`<div>${rrt1}</div>`);
                             }
                             else{
-                                if(selected[0].model.attributes.flags & 1 || selected[1].model.attributes.flags & 1){
-                                    //Tunnel
-                                    $('.segDiffAttr').append(`<div>${I18n.translations[I18n.currentLocale()].edit.segment.fields.tunnel}</div>`);
-                                    $('.segDiffSeg1').append(`<div>${(selected[0].model.attributes.flags & 1) === 1}</div>`);
-                                    $('.segDiffSeg2').append(`<div>${(selected[1].model.attributes.flags & 1) === 1}</div>`);
-                                }
-                                if(selected[0].model.attributes.flags & 16 || selected[1].model.attributes.flags & 16){
-                                    //Unpaved
-                                    $('.segDiffAttr').append(`<div>${I18n.translations[I18n.currentLocale()].edit.segment.fields.unpaved}</div>`);
-                                    $('.segDiffSeg1').append(`<div>${(selected[0].model.attributes.flags & 16) === 16}</div>`);
-                                    $('.segDiffSeg2').append(`<div>${(selected[1].model.attributes.flags & 16) === 16}</div>`);
-                                }
-                                if(selected[0].model.attributes.flags & 32 || selected[1].model.attributes.flags & 32){
-                                    //Headlights
-                                    $('.segDiffAttr').append(`<div>${I18n.translations[I18n.currentLocale()].edit.segment.fields.headlights}</div>`);
-                                    $('.segDiffSeg1').append(`<div>${(selected[0].model.attributes.flags & 32) === 32}</div>`);
-                                    $('.segDiffSeg2').append(`<div>${(selected[1].model.attributes.flags & 32) === 32}</div>`);
-                                }
-                                if(selected[0].model.attributes.flags & 128 || selected[1].model.attributes.flags & 128){
-                                    //Nearby HOV
-                                    $('.segDiffAttr').append(`<div>${I18n.translations[I18n.currentLocale()].edit.segment.fields.nearbyHOV}</div>`);
-                                    $('.segDiffSeg1').append(`<div>${(selected[0].model.attributes.flags & 128) === 128}</div>`);
-                                    $('.segDiffSeg2').append(`<div>${(selected[1].model.attributes.flags & 128) === 128}</div>`);
-                                }
+                                $('.segDiffSeg1').append(`<div>${selected[0].model.attributes[property]}</div>`);
+                                $('.segDiffSeg2').append(`<div>${selected[1].model.attributes[property]}</div>`);
+                            }
+                        }
+                        else{
+                            if(selected[0].model.attributes.flags & 1 || selected[1].model.attributes.flags & 1){
+                                //Tunnel
+                                $('.segDiffAttr').append(`<div>${I18n.translations[I18n.currentLocale()].edit.segment.fields.tunnel}</div>`);
+                                $('.segDiffSeg1').append(`<div>${(selected[0].model.attributes.flags & 1) === 1}</div>`);
+                                $('.segDiffSeg2').append(`<div>${(selected[1].model.attributes.flags & 1) === 1}</div>`);
+                            }
+                            if(selected[0].model.attributes.flags & 16 || selected[1].model.attributes.flags & 16){
+                                //Unpaved
+                                $('.segDiffAttr').append(`<div>${I18n.translations[I18n.currentLocale()].edit.segment.fields.unpaved}</div>`);
+                                $('.segDiffSeg1').append(`<div>${(selected[0].model.attributes.flags & 16) === 16}</div>`);
+                                $('.segDiffSeg2').append(`<div>${(selected[1].model.attributes.flags & 16) === 16}</div>`);
+                            }
+                            if(selected[0].model.attributes.flags & 32 || selected[1].model.attributes.flags & 32){
+                                //Headlights
+                                $('.segDiffAttr').append(`<div>${I18n.translations[I18n.currentLocale()].edit.segment.fields.headlights}</div>`);
+                                $('.segDiffSeg1').append(`<div>${(selected[0].model.attributes.flags & 32) === 32}</div>`);
+                                $('.segDiffSeg2').append(`<div>${(selected[1].model.attributes.flags & 32) === 32}</div>`);
+                            }
+                            if(selected[0].model.attributes.flags & 128 || selected[1].model.attributes.flags & 128){
+                                //Nearby HOV
+                                $('.segDiffAttr').append(`<div>${I18n.translations[I18n.currentLocale()].edit.segment.fields.nearbyHOV}</div>`);
+                                $('.segDiffSeg1').append(`<div>${(selected[0].model.attributes.flags & 128) === 128}</div>`);
+                                $('.segDiffSeg2').append(`<div>${(selected[1].model.attributes.flags & 128) === 128}</div>`);
                             }
                         }
                     }
