@@ -2,7 +2,7 @@
 // @name         WME Diffinator
 // @namespace    http://tampermonkey.net/
 // @version      2018.10.22.01
-// @description  Display differences between two segments for attributes that prevent deleting a common node
+// @description  Display differences between two segments
 // @author       JustinS83
 // @include      https://www.waze.com/editor/*
 // @include      https://www.waze.com/*/editor/*
