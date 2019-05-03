@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Diffinator
 // @namespace    https://greasyfork.org/en/users/166843-wazedev
-// @version      2018.10.22.04
+// @version      2019.05.03.01
 // @description  Display differences between two segments
 // @author       JustinS83
 // @include      https://www.waze.com/editor*
